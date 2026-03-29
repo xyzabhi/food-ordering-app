@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import Cart, { type CartLineItem } from "@/src/components/Cart";
 import ConfirmOrderModal from "@/src/components/ConfirmOrder";
 import ProductItemCard, { type ProductItem } from "@/src/components/ProductItemCard";
-import { initialCart, products } from "@/src/data/menu";
+import { placeOrder, type PlacedOrder } from "@/src/lib/orders-api";
 
 function CartFabIcon() {
   return (
@@ -20,13 +20,16 @@ function CartFabIcon() {
   );
 }
 
-export default function OrderingClient() {
-  const [lines, setLines] = useState<CartLineItem[]>(initialCart);
-  const [confirmedLines, setConfirmedLines] = useState<CartLineItem[] | null>(null);
+export default function OrderingClient({ products }: { products: ProductItem[] }) {
+  const [lines, setLines] = useState<CartLineItem[]>([]);
+  const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
 
   const qtyByProductId = useMemo(() => {
-    const m = new Map<number, number>();
+    const m = new Map<string, number>();
     for (const line of lines) {
       m.set(line.productId, line.quantity);
     }
@@ -86,33 +89,39 @@ export default function OrderingClient() {
     });
   }, []);
 
-  const removeLine = useCallback((productId: number) => {
+  const removeLine = useCallback((productId: string) => {
     setLines((prev) => prev.filter((l) => l.productId !== productId));
   }, []);
 
-  const confirmOrder = useCallback(() => {
-    setLines((current) => {
-      if (current.length === 0) return current;
-      setConfirmedLines([...current]);
-      return [];
-    });
+  const confirmOrder = useCallback(async () => {
+    if (lines.length === 0) return;
+    setCheckoutError(null);
+    setCheckoutLoading(true);
+    const items = lines.map((l) => ({
+      product_id: l.productId,
+      quantity: l.quantity,
+    }));
+    const result = await placeOrder(items, couponCode.trim());
+    setCheckoutLoading(false);
+    if (!result.ok) {
+      setCheckoutError(result.message);
+      return;
+    }
+    setLines([]);
+    setCouponCode("");
+    setPlacedOrder(result.order);
     setMobileCartOpen(false);
-  }, []);
+  }, [lines, couponCode]);
 
   const closeConfirmedModal = useCallback(() => {
-    setConfirmedLines(null);
-  }, []);
-
-  const getProductImage = useCallback((productId: number) => {
-    return products.find((p) => p.id === productId)?.image;
+    setPlacedOrder(null);
   }, []);
 
   return (
     <>
       <ConfirmOrderModal
-        open={confirmedLines !== null}
-        lines={confirmedLines ?? []}
-        getProductImage={getProductImage}
+        open={placedOrder !== null}
+        order={placedOrder}
         onStartNewOrder={closeConfirmedModal}
       />
       <main
@@ -138,7 +147,18 @@ export default function OrderingClient() {
             </div>
           </div>
           <div className="hidden w-full lg:sticky lg:block lg:top-8 lg:w-[min(100%,380px)]">
-            <Cart lines={lines} onRemove={removeLine} onConfirmOrder={confirmOrder} />
+            <Cart
+              lines={lines}
+              onRemove={removeLine}
+              onConfirmOrder={confirmOrder}
+              couponCode={couponCode}
+              onCouponChange={(v) => {
+                setCouponCode(v);
+                setCheckoutError(null);
+              }}
+              checkoutError={checkoutError}
+              checkoutLoading={checkoutLoading}
+            />
           </div>
         </div>
 
@@ -174,6 +194,13 @@ export default function OrderingClient() {
                   lines={lines}
                   onRemove={removeLine}
                   onConfirmOrder={confirmOrder}
+                  couponCode={couponCode}
+                  onCouponChange={(v) => {
+                    setCouponCode(v);
+                    setCheckoutError(null);
+                  }}
+                  checkoutError={checkoutError}
+                  checkoutLoading={checkoutLoading}
                   onClose={() => setMobileCartOpen(false)}
                 />
               </div>

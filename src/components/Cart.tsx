@@ -1,9 +1,10 @@
 "use client";
 
+import Spinner from "@/src/components/Spinner";
 import { formatUsd } from "@/src/lib/format";
 
 export type CartLineItem = {
-  productId: number;
+  productId: string;
   name: string;
   unitPrice: number;
   quantity: number;
@@ -55,8 +56,12 @@ function EmptyCartIllustration({ className }: { className?: string }) {
 
 type CartProps = {
   lines: CartLineItem[];
-  onRemove: (productId: number) => void;
-  onConfirmOrder: () => void;
+  onRemove: (productId: string) => void;
+  onConfirmOrder: () => void | Promise<void>;
+  couponCode: string;
+  onCouponChange: (value: string) => void;
+  checkoutError: string | null;
+  checkoutLoading: boolean;
   /** Mobile bottom sheet: show close control */
   onClose?: () => void;
   /** `sheet` = inside mobile drawer (tighter layout, more list scroll area) */
@@ -67,6 +72,10 @@ export default function Cart({
   lines,
   onRemove,
   onConfirmOrder,
+  couponCode,
+  onCouponChange,
+  checkoutError,
+  checkoutLoading,
   onClose,
   variant = "sidebar",
 }: CartProps) {
@@ -76,6 +85,7 @@ export default function Cart({
 
   return (
     <aside
+      aria-busy={checkoutLoading}
       className={
         isSheet
           ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-transparent p-0"
@@ -176,16 +186,49 @@ export default function Cart({
             </p>
           </div>
 
+          <div className="mt-4 shrink-0">
+            <label htmlFor={`cart-coupon-${variant}`} className="sr-only">
+              Coupon code
+            </label>
+            <input
+              id={`cart-coupon-${variant}`}
+              type="text"
+              value={couponCode}
+              onChange={(e) => onCouponChange(e.target.value)}
+              placeholder="Coupon (e.g. SAVE10)"
+              disabled={checkoutLoading}
+              autoComplete="off"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-[#4D4D4D] placeholder:text-gray-400 focus:border-[#A6634B] focus:outline-none focus:ring-1 focus:ring-[#A6634B] disabled:opacity-60"
+            />
+          </div>
+
+          {checkoutError ? (
+            <p
+              className="mt-3 shrink-0 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-800"
+              role="alert"
+            >
+              {checkoutError}
+            </p>
+          ) : null}
+
           <button
             type="button"
-            onClick={onConfirmOrder}
+            onClick={() => void onConfirmOrder()}
+            disabled={checkoutLoading}
             className={
               isSheet
-                ? "mt-5 min-h-12 w-full shrink-0 touch-manipulation rounded-xl bg-[#C73E1D] py-3.5 text-center text-sm font-bold text-white shadow-sm transition active:bg-[#a03015] sm:min-h-0 sm:hover:bg-[#b03618]"
-                : "mt-5 min-h-12 w-full touch-manipulation rounded-xl bg-[#C73E1D] py-3.5 text-center text-sm font-bold text-white shadow-sm transition active:bg-[#a03015] sm:min-h-0 sm:hover:bg-[#b03618]"
+                ? "mt-5 flex min-h-12 w-full shrink-0 touch-manipulation items-center justify-center gap-2 rounded-xl bg-[#C73E1D] py-3.5 text-center text-sm font-bold text-white shadow-sm transition enabled:active:bg-[#a03015] enabled:sm:min-h-0 enabled:sm:hover:bg-[#b03618] disabled:opacity-60"
+                : "mt-5 flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl bg-[#C73E1D] py-3.5 text-center text-sm font-bold text-white shadow-sm transition enabled:active:bg-[#a03015] enabled:sm:min-h-0 enabled:sm:hover:bg-[#b03618] disabled:opacity-60"
             }
           >
-            Confirm Order
+            {checkoutLoading ? (
+              <>
+                <Spinner className="size-4" variant="onPrimary" aria-hidden />
+                <span>Placing order…</span>
+              </>
+            ) : (
+              "Confirm Order"
+            )}
           </button>
         </>
       )}

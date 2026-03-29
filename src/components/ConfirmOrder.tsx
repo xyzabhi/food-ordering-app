@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
-import type { CartLineItem } from "@/src/components/Cart";
+import type { PlacedOrder } from "@/src/lib/orders-api";
 import { formatUsd } from "@/src/lib/format";
 
 function CheckIcon() {
@@ -25,17 +25,20 @@ function CheckIcon() {
   );
 }
 
+function qtyForProduct(order: PlacedOrder, productId: string): number {
+  const line = order.items.find((i) => i.product_id === productId);
+  return line?.quantity ?? 0;
+}
+
 export type ConfirmOrderModalProps = {
   open: boolean;
-  lines: CartLineItem[];
-  getProductImage: (productId: number) => string | undefined;
+  order: PlacedOrder | null;
   onStartNewOrder: () => void;
 };
 
 export default function ConfirmOrderModal({
   open,
-  lines,
-  getProductImage,
+  order,
   onStartNewOrder,
 }: ConfirmOrderModalProps) {
   const titleId = useId();
@@ -58,10 +61,13 @@ export default function ConfirmOrderModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onStartNewOrder]);
 
-  if (!open) return null;
+  if (!open || !order) return null;
   if (typeof window === "undefined") return null;
 
-  const orderTotal = lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+  const created = new Date(order.createdAt);
+  const createdLabel = Number.isNaN(created.getTime())
+    ? order.createdAt
+    : created.toLocaleString();
 
   return createPortal(
     <div
@@ -94,6 +100,13 @@ export default function ConfirmOrderModal({
               <p className="mt-1.5 text-sm text-[#9E9E9E] sm:text-[15px]">
                 We hope you enjoy your food!
               </p>
+              <p className="mt-2 font-mono text-xs text-[#6B6B6B]">Order #{order.id}</p>
+              {order.couponCode ? (
+                <p className="mt-1 text-xs text-[#A6634B]">
+                  Coupon: <span className="font-semibold">{order.couponCode}</span>
+                </p>
+              ) : null}
+              <p className="mt-1 text-xs text-[#9E9E9E]">{createdLabel}</p>
             </div>
           </div>
 
@@ -102,27 +115,26 @@ export default function ConfirmOrderModal({
               className="min-h-0 max-h-[min(52dvh,22rem)] flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] touch-pan-y divide-y divide-[#ebe6e1] sm:max-h-[min(48dvh,28rem)]"
               aria-label="Order items"
             >
-              {lines.map((line) => {
-                const img = getProductImage(line.productId);
-                const subtotal = line.quantity * line.unitPrice;
+              {order.products.map((p) => {
+                const qty = qtyForProduct(order, p.id);
+                const subtotal = qty * p.price;
                 return (
-                  <li key={line.productId} className="flex gap-3 py-4 first:pt-0">
+                  <li key={p.id} className="flex gap-3 py-4 first:pt-0">
                     <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#eee] sm:h-16 sm:w-16">
-                      {img ? (
-                        <Image
-                          src={img}
-                          alt={line.name}
-                          fill
-                          className="object-cover"
-                          sizes="64px"
-                        />
-                      ) : null}
+                      <Image
+                        src={p.image}
+                        alt={p.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                        unoptimized
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold leading-snug text-[#4D4D4D]">{line.name}</p>
+                      <p className="font-bold leading-snug text-[#4D4D4D]">{p.name}</p>
                       <p className="mt-1 text-sm">
-                        <span className="font-semibold text-[#D25B32]">{line.quantity}x</span>
-                        <span className="text-[#9E9E9E]"> @ {formatUsd(line.unitPrice)}</span>
+                        <span className="font-semibold text-[#D25B32]">{qty}x</span>
+                        <span className="text-[#9E9E9E]"> @ {formatUsd(p.price)}</span>
                       </p>
                     </div>
                     <p className="shrink-0 self-start text-sm font-semibold text-[#6B6B6B] sm:text-base">
@@ -133,9 +145,23 @@ export default function ConfirmOrderModal({
               })}
             </ul>
 
-            <div className="mt-4 shrink-0 flex items-baseline justify-between border-t border-[#ebe6e1] pt-4">
-              <span className="text-sm font-medium text-[#6B6B6B]">Order Total</span>
-              <span className="text-xl font-bold text-[#2a2a2a]">{formatUsd(orderTotal)}</span>
+            <div className="mt-4 shrink-0 space-y-2 border-t border-[#ebe6e1] pt-4 text-sm">
+              <div className="flex justify-between text-[#6B6B6B]">
+                <span>Subtotal</span>
+                <span className="font-medium tabular-nums">{formatUsd(order.totalPrice)}</span>
+              </div>
+              {order.discount > 0 ? (
+                <div className="flex justify-between text-[#2E7D32]">
+                  <span>Discount</span>
+                  <span className="font-medium tabular-nums">−{formatUsd(order.discount)}</span>
+                </div>
+              ) : null}
+              <div className="flex items-baseline justify-between border-t border-[#ebe6e1] pt-2">
+                <span className="text-sm font-medium text-[#6B6B6B]">Total</span>
+                <span className="text-xl font-bold text-[#2a2a2a] tabular-nums">
+                  {formatUsd(order.finalPrice)}
+                </span>
+              </div>
             </div>
           </div>
 

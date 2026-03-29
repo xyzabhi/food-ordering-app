@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { formatUsd } from "@/src/lib/format";
 
 function CartPlusIcon() {
@@ -32,7 +33,7 @@ function CartPlusIcon() {
 }
 
 export type ProductItem = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   image: string;
@@ -66,6 +67,7 @@ export default function ProductItemCard({
             fill
             className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 280px"
+            unoptimized
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/10 to-transparent" />
         </div>
@@ -113,7 +115,12 @@ export default function ProductItemCard({
           {product.type}
         </p>
         <h2 className="mt-1 text-base font-bold leading-snug text-[#4D4D4D]">
-          {product.name}
+          <Link
+            href={`/products/${encodeURIComponent(product.id)}`}
+            className="rounded-sm hover:text-[#A6634B] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A6634B]/40 focus-visible:ring-offset-2"
+          >
+            {product.name}
+          </Link>
         </h2>
         <p className="mt-2 text-base font-semibold text-[#A6634B]">{priceLabel}</p>
       </div>
