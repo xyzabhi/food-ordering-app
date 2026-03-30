@@ -18,7 +18,11 @@ function parseCheckPromoBody(data: unknown): CheckPromoOk | null {
   const code = data.code;
   if (valid === true) {
     const discountPercent = data.discountPercent;
-    if (typeof code !== "string" || typeof discountPercent !== "number" || !Number.isFinite(discountPercent)) {
+    if (
+      typeof code !== "string" ||
+      typeof discountPercent !== "number" ||
+      !Number.isFinite(discountPercent)
+    ) {
       return null;
     }
     return { valid: true, code, discountPercent };
@@ -31,41 +35,10 @@ function parseCheckPromoBody(data: unknown): CheckPromoOk | null {
 }
 
 /**
- * POST /checkpromo — preferred. Trims code on the client before send.
- * Uses default fetch credentials (same-origin policy; no cookies to API).
+ * GET /checkpromo?code=... — trims code before send.
+ * UI promo validation uses this endpoint only.
  */
 export async function checkPromoCode(code: string): Promise<CheckPromoResult> {
-  const trimmed = code.trim();
-  const url = `${getApiBaseUrl()}/checkpromo`;
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: trimmed }),
-    });
-
-    if (res.status === 200) {
-      let data: unknown;
-      try {
-        data = await res.json();
-      } catch {
-        return { ok: false, message: "Could not verify code", status: res.status };
-      }
-      const body = parseCheckPromoBody(data);
-      if (!body) {
-        return { ok: false, message: "Could not verify code", status: res.status };
-      }
-      return { ok: true, body };
-    }
-
-    return { ok: false, message: "Could not verify code", status: res.status };
-  } catch {
-    return { ok: false, message: "Could not verify code", status: 0 };
-  }
-}
-
-/** GET /checkpromo?code=… — same semantics as POST; handy for quick manual tests. */
-export async function checkPromoCodeGet(code: string): Promise<CheckPromoResult> {
   const trimmed = code.trim();
   const q = encodeURIComponent(trimmed);
   const url = `${getApiBaseUrl()}/checkpromo?code=${q}`;
