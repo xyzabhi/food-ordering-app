@@ -5,15 +5,19 @@ html {
 }
 
 body {
-  font-family: system-ui, sans-serif;
   overflow-x: clip;
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
 
+/* Set on <html> via next/font variable */
+.font-display {
+  font-family: var(--font-display), ui-serif, Georgia, "Times New Roman", serif;
+}
+
 button:focus-visible,
 [role="button"]:focus-visible {
-  outline: 2px solid #a6634b;
+  outline: 2px solid #c73b0f;
   outline-offset: 2px;
 }
 

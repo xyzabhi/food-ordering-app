@@ -54,12 +54,21 @@ function EmptyCartIllustration({ className }: { className?: string }) {
   );
 }
 
+export type CartPromoState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "valid"; discountPercent: number }
+  | { kind: "invalid" }
+  | { kind: "error" };
+
 type CartProps = {
   lines: CartLineItem[];
   onRemove: (productId: string) => void;
   onConfirmOrder: () => void | Promise<void>;
   couponCode: string;
   onCouponChange: (value: string) => void;
+  onCheckPromo?: () => void;
+  promoState?: CartPromoState;
   checkoutError: string | null;
   checkoutLoading: boolean;
   /** Mobile bottom sheet: show close control */
@@ -74,6 +83,8 @@ export default function Cart({
   onConfirmOrder,
   couponCode,
   onCouponChange,
+  onCheckPromo,
+  promoState = { kind: "idle" },
   checkoutError,
   checkoutLoading,
   onClose,
@@ -82,25 +93,27 @@ export default function Cart({
   const totalQty = lines.reduce((s, l) => s + l.quantity, 0);
   const orderTotal = lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
   const isSheet = variant === "sheet";
+  const promoLoading = promoState.kind === "loading";
+  const busy = checkoutLoading || promoLoading;
 
   return (
     <aside
-      aria-busy={checkoutLoading}
+      aria-busy={busy}
       className={
         isSheet
           ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-transparent p-0"
-          : "flex min-h-[min(320px,50dvh)] w-full max-w-md flex-col rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:min-h-[min(420px,55vh)] sm:p-6 lg:max-w-none lg:shrink-0 lg:self-start"
+          : "flex min-h-[min(320px,50dvh)] w-full max-w-md flex-col rounded-2xl border border-[#2D2826]/[0.06] bg-white p-5 shadow-[0_4px_28px_rgba(45,40,38,0.08)] sm:min-h-[min(420px,55vh)] sm:p-7 lg:max-w-none lg:shrink-0 lg:self-start"
       }
     >
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <h2 className="text-base font-semibold tracking-tight text-[#A6634B] sm:text-lg">
+        <h2 className="text-lg font-bold tracking-tight text-[#C73B0F] sm:text-xl">
           Your Cart ({totalQty})
         </h2>
         {onClose ? (
           <button
             type="button"
             onClick={onClose}
-            className="flex size-10 touch-manipulation items-center justify-center rounded-full text-[#6B6B6B] transition active:bg-gray-100"
+            className="flex size-10 touch-manipulation items-center justify-center rounded-full text-[#8A827A] transition hover:bg-[#F7F5F2] active:bg-[#EFEBE6]"
             aria-label="Close cart"
           >
             <svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -134,8 +147,8 @@ export default function Cart({
           <ul
             className={
               isSheet
-                ? "mt-4 min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] touch-pan-y"
-                : "mt-3 max-h-[min(40dvh,14rem)] divide-y divide-gray-100 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] touch-pan-y sm:mt-4 sm:max-h-[min(50dvh,20rem)] lg:max-h-[calc(100dvh-22rem)]"
+                ? "mt-4 min-h-0 flex-1 divide-y divide-[#2D2826]/[0.06] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] touch-pan-y"
+                : "mt-5 max-h-[min(40dvh,14rem)] divide-y divide-[#2D2826]/[0.06] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] touch-pan-y sm:max-h-[min(50dvh,20rem)] lg:max-h-[calc(100dvh-22rem)]"
             }
           >
             {lines.map((line) => {
@@ -143,21 +156,21 @@ export default function Cart({
               return (
                 <li key={line.productId} className="flex gap-2 py-3 first:pt-0 sm:gap-3 sm:py-4">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold leading-snug text-[#4D4D4D] sm:text-base">
+                    <p className="text-[15px] font-semibold leading-snug text-[#3D3530] sm:text-base">
                       {line.name}
                     </p>
                     <div className="mt-1 flex items-baseline justify-between gap-2 text-sm">
                       <p>
-                        <span className="font-semibold text-[#D25B32]">{line.quantity}x</span>
-                        <span className="text-[#9E9E9E]"> @{formatUsd(line.unitPrice)}</span>
+                        <span className="font-semibold tabular-nums text-[#C73B0F]">{line.quantity}x</span>
+                        <span className="text-[#8A827A]"> @{formatUsd(line.unitPrice)}</span>
                       </p>
-                      <p className="shrink-0 font-semibold text-[#6B6B6B]">{formatUsd(subtotal)}</p>
+                      <p className="shrink-0 font-semibold tabular-nums text-[#3D3530]">{formatUsd(subtotal)}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => onRemove(line.productId)}
-                    className="flex size-10 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[#E8E8E8] text-[#9E9E9E] transition active:bg-gray-100 sm:size-8 sm:hover:border-[#D0D0D0] sm:hover:bg-gray-50 sm:hover:text-[#6B6B6B]"
+                    className="flex size-10 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[#E8E3DD] text-[#A39A92] transition hover:border-[#D8D0C8] hover:bg-[#FAFAF8] hover:text-[#6B6560] active:bg-[#F3F0EC] sm:size-8"
                     aria-label={`Remove ${line.name}`}
                   >
                     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -174,32 +187,58 @@ export default function Cart({
             })}
           </ul>
 
-          <div className="mt-4 flex shrink-0 items-baseline justify-between border-t border-gray-100 pt-4">
-            <span className="text-sm font-medium text-[#6B6B6B]">Order Total</span>
-            <span className="text-xl font-bold text-[#4D4D4D]">{formatUsd(orderTotal)}</span>
+          <div className="mt-5 flex shrink-0 items-baseline justify-between border-t border-[#2D2826]/[0.08] pt-5">
+            <span className="text-sm font-medium text-[#6B6560]">Order Total</span>
+            <span className="text-2xl font-bold tabular-nums tracking-tight text-[#2D2826]">{formatUsd(orderTotal)}</span>
           </div>
 
-          <div className="mt-5 flex shrink-0 gap-3 rounded-xl bg-[#FFF4EE] px-4 py-3">
+          <div className="mt-6 flex shrink-0 gap-3 rounded-xl border border-[#E8E3DD]/80 bg-[#FAF7F3] px-4 py-3.5">
             <TreeIcon />
-            <p className="text-sm leading-snug text-[#4D4D4D]">
-              This is a <span className="font-bold">carbon-neutral</span> delivery
+            <p className="text-sm leading-relaxed text-[#4A4540]">
+              This is a <span className="font-semibold text-[#2D2826]">carbon-neutral</span> delivery
             </p>
           </div>
 
-          <div className="mt-4 shrink-0">
+          <div className="mt-4 shrink-0 space-y-2">
             <label htmlFor={`cart-coupon-${variant}`} className="sr-only">
               Coupon code
             </label>
-            <input
-              id={`cart-coupon-${variant}`}
-              type="text"
-              value={couponCode}
-              onChange={(e) => onCouponChange(e.target.value)}
-              placeholder="Coupon (e.g. SAVE10)"
-              disabled={checkoutLoading}
-              autoComplete="off"
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-[#4D4D4D] placeholder:text-gray-400 focus:border-[#A6634B] focus:outline-none focus:ring-1 focus:ring-[#A6634B] disabled:opacity-60"
-            />
+            <div className="flex gap-2">
+              <input
+                id={`cart-coupon-${variant}`}
+                type="text"
+                value={couponCode}
+                onChange={(e) => onCouponChange(e.target.value)}
+                placeholder="Coupon (e.g. SAVE10)"
+                disabled={busy}
+                autoComplete="off"
+                className="min-w-0 flex-1 rounded-xl border border-[#E8E3DD] bg-[#FDFCFA] px-3 py-2.5 text-sm text-[#3D3530] placeholder:text-[#A39A92] focus:border-[#C73B0F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C73B0F]/20 disabled:opacity-60"
+              />
+              {onCheckPromo ? (
+                <button
+                  type="button"
+                  onClick={() => onCheckPromo()}
+                  disabled={busy || !couponCode.trim()}
+                  className="shrink-0 touch-manipulation rounded-xl border border-[#E8E3DD] bg-white px-3 py-2.5 text-sm font-semibold text-[#C73B0F] transition enabled:hover:border-[#C73B0F]/40 enabled:hover:bg-[#FFF9F5] enabled:active:bg-[#FFF4EE] disabled:opacity-50"
+                >
+                  Check
+                </button>
+              ) : null}
+            </div>
+            {promoLoading ? (
+              <p className="flex items-center gap-2 text-xs text-[#6B6B6B]" role="status">
+                <Spinner className="size-3.5" aria-hidden />
+                Checking code…
+              </p>
+            ) : promoState.kind === "valid" ? (
+              <p className="text-xs font-medium text-[#2E7D32]">
+                Code OK — {promoState.discountPercent}% off
+              </p>
+            ) : promoState.kind === "invalid" ? (
+              <p className="text-xs font-semibold tracking-wide text-red-700">INVALID PROMO</p>
+            ) : promoState.kind === "error" ? (
+              <p className="text-xs text-[#6B6B6B]">Could not verify code</p>
+            ) : null}
           </div>
 
           {checkoutError ? (
@@ -214,11 +253,11 @@ export default function Cart({
           <button
             type="button"
             onClick={() => void onConfirmOrder()}
-            disabled={checkoutLoading}
+            disabled={busy}
             className={
               isSheet
-                ? "mt-5 flex min-h-12 w-full shrink-0 touch-manipulation items-center justify-center gap-2 rounded-xl bg-[#C73E1D] py-3.5 text-center text-sm font-bold text-white shadow-sm transition enabled:active:bg-[#a03015] enabled:sm:min-h-0 enabled:sm:hover:bg-[#b03618] disabled:opacity-60"
-                : "mt-5 flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl bg-[#C73E1D] py-3.5 text-center text-sm font-bold text-white shadow-sm transition enabled:active:bg-[#a03015] enabled:sm:min-h-0 enabled:sm:hover:bg-[#b03618] disabled:opacity-60"
+                ? "mt-6 flex min-h-12 w-full shrink-0 touch-manipulation items-center justify-center gap-2 rounded-xl bg-[#C73B0F] py-3.5 text-center text-sm font-bold tracking-wide text-white shadow-[0_4px_16px_rgba(199,59,15,0.35)] transition enabled:active:bg-[#9e2e0b] enabled:sm:min-h-0 enabled:hover:bg-[#b5340d] disabled:opacity-60"
+                : "mt-6 flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl bg-[#C73B0F] py-3.5 text-center text-sm font-bold tracking-wide text-white shadow-[0_4px_16px_rgba(199,59,15,0.35)] transition enabled:active:bg-[#9e2e0b] enabled:sm:min-h-0 enabled:hover:bg-[#b5340d] disabled:opacity-60"
             }
           >
             {checkoutLoading ? (

@@ -16,7 +16,7 @@ export default function Spinner({
   const ring =
     variant === "onPrimary"
       ? "border-white/35 border-t-white"
-      : "border-[#E5D9CF] border-t-[#A6634B]";
+      : "border-[#E8E3DD] border-t-[#C73B0F]";
   return (
     <span
       className={`shrink-0 rounded-full border-2 animate-spin ${ring} ${className}`}
