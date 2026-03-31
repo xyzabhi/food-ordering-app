@@ -214,7 +214,7 @@ export default function Cart({
                 autoComplete="off"
                 className="min-w-0 flex-1 rounded-xl border border-[#E8E3DD] bg-[#FDFCFA] px-3 py-2.5 text-sm text-[#3D3530] placeholder:text-[#A39A92] focus:border-[#C73B0F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C73B0F]/20 disabled:opacity-60"
               />
-              {onCheckPromo ? (
+              {/* {onCheckPromo ? (
                 <button
                   type="button"
                   onClick={() => onCheckPromo()}
@@ -223,7 +223,7 @@ export default function Cart({
                 >
                   Check
                 </button>
-              ) : null}
+              ) : null} */}
             </div>
             {promoLoading ? (
               <p className="flex items-center gap-2 text-xs text-[#6B6B6B]" role="status">
